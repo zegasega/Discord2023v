@@ -4,14 +4,17 @@ from discord.commands import Option
 import requests
 import json
 import datetime
-import asyncio
 from bs4 import BeautifulSoup
 from datetime import datetime
 import re
 from configs import TOKEN
-from discord.ext import tasks, commands
+from discord.ext import tasks
 import time
 import platform
+
+
+
+
 intents = discord.Intents.default()
 bot =discord.Bot(intents=intents,debug_guilds=[1005131834306342933])
 
@@ -29,6 +32,49 @@ async def on_ready():
     print(prfx + ' Discord Version ' + Fore.YELLOW + discord.__version__)
     print(prfx + ' Python Version ' + Fore.YELLOW + str(platform.python_version()))
     update_nft_info.start()
+
+
+
+@bot.command()
+async def kick(ctx,member:discord.Member,*,reason=None):
+    if ctx.author.guild_permissions.kick_members:
+        await member.kick(reason=reason)
+        await ctx.send(f'{member.mention}  kicked for {reason}')
+    else:
+        await ctx.send('You have no permission to use')
+
+bot.command()
+async def ban(ctx,member:discord.Member,*,reason=None):
+    if ctx.author.guild_permissions.ban_members:
+        await member.ban(reason=reason)
+        await ctx.send(f'{member.mention} banned for {reason}')
+    else:
+        await ctx.send('You have no permission to use')
+
+
+bot.command()
+@bot.command()
+async def unban(ctx, *, member):
+    if ctx.author.guild_permissions.ban_members:
+        banned_users = await ctx.guild.bans()
+        member_name, member_disc = member.split('#')
+
+        for ban_record in banned_users:
+            user = ban_record.user
+
+            if (user.name, user.discriminator) == (member_name, member_disc):
+                await ctx.guild.unban(user)
+                await ctx.send(f'{user.mention} unbanned welcomeback.')
+                return
+
+        await ctx.send(f'{member} ban listesinde bulunamadı.')
+    else:
+        await ctx.send("You have to no permission to use.")
+
+
+
+
+
 
 
 @bot.slash_command(description = "merhaba")
@@ -533,9 +579,6 @@ async def remove_nft(ctx, nft_index: int):
             await ctx.respond("Invalid Index.")
     except ValueError:
         await ctx.respond("Please enter valid index.") #maybe we can change with embed embeds are looks cool
-
-
-
 
 
 
