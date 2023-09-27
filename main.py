@@ -9,15 +9,15 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 import re
 from configs import TOKEN
-
 from discord.ext import tasks, commands
 import time
-
 import platform
 intents = discord.Intents.default()
 bot =discord.Bot(intents=intents,debug_guilds=[1005131834306342933])
 
 
+
+#need some fix for list deployed
 #commands
 #clan info
 
