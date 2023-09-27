@@ -12,7 +12,7 @@ This project contains a bot that operates on Discord, equipped with various comm
 To use the bot, you can follow these steps:
 
 1. Clone this project:
-
+2.Framework:py-cord
 
 
 ```bash
@@ -31,6 +31,9 @@ run the main file
 python main.py
 python3 main.py
 ```
+
+Feel free to use this English version of the README for your project. Make sure to replace `YOUR_DISCORD_BOT_TOKEN` with your actual Discord bot token, and adapt any other project-specific information as needed.
+
 
 ![Ekran Görüntüsü Açıklaması](images/createbot.png)
 ![Ekran Görüntüsü Açıklaması](images/gettoken.png)
