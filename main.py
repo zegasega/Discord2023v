@@ -7,7 +7,7 @@ import datetime
 from bs4 import BeautifulSoup
 from datetime import datetime
 import re
-from configs import TOKEN
+from configs import TOKEN,WEATHER_API
 from discord.ext import tasks
 import time
 import platform
@@ -521,7 +521,7 @@ async def update_nft_info():
             inline=True
         )
 
-    channel = bot.get_channel(1156358339014447134)  #send the discord channel id
+    channel = bot.get_channel(1151904433635078274)  #send the discord channel id
     new_message = await channel.send(embed=embed)
     old_message = new_message  #keep the new message here
 
@@ -579,6 +579,29 @@ async def remove_nft(ctx, nft_index: int):
             await ctx.respond("Invalid Index.")
     except ValueError:
         await ctx.respond("Please enter valid index.") #maybe we can change with embed embeds are looks cool
+
+
+@bot.command()
+async def weather(ctx,city):
+    """Weather Information Current"""
+    url = f'https://api.openweathermap.org/data/2.5/weather?q={city}&appid={WEATHER_API}'
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = json.loads(response.text)
+
+        #target datas
+        name = data.get('name')
+        weather =data['weather'][0]['description']
+        get_temp = data['main']['temp']
+        temp = int(get_temp) - 273
+        #embed config
+        embed = discord.Embed(title=f'Weather information for|{name}', description="weather information", color=discord.Color.random())
+        embed.add_field(name='City Name',value=name,inline=True)
+        embed.add_field(name='Weather', value=f'{weather}', inline=True)
+        embed.add_field(name='Temp', value=f'Temp: {temp}℃  ', inline=True)
+
+        await ctx.respond(embed=embed)
+
 
 
 
