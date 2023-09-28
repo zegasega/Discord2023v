@@ -7,7 +7,7 @@ import datetime
 from bs4 import BeautifulSoup
 from datetime import datetime
 import re
-from configs import TOKEN,WEATHER_API
+from configs import TOKEN,WEATHER_API,wallet_address
 from discord.ext import tasks
 import time
 import platform
@@ -602,8 +602,55 @@ async def weather(ctx,city):
 
         await ctx.respond(embed=embed)
 
+@bot.command()
+async def get_balance(ctx,wallet):
+
+    url = 'https://api.coingecko.com/api/v3/simple/price'
+    params = {
+        'ids': 'solana',
+        'vs_currencies': 'usd'
+    }
+
+    response = requests.get(url, params=params)
+
+    data = response.json()
+
+    sol_price_usd = data['solana']['usd']
+
+    rpc_url = 'https://api.mainnet-beta.solana.com/'  #mainnet is ideal rpc for the req if you want you can request for other rpcs like dev.net
 
 
+    #rpc req
+    rpc_request = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "getBalance",
+        "params": [wallet], #wallet adress
+    }
+
+    # RPC req send
+    response = requests.post(rpc_url, json=rpc_request)
+
+    #response and target data
+    if response.status_code == 200:
+        data = response.json()
+        b = data['result']['value']
+        balance = b / (10 ** 9)
+        sol_usd=balance*sol_price_usd
+
+
+        round_balance=round(balance,3)
+        round_sol_usd=round(sol_usd,2)
+        round_sol_price_usd =(sol_price_usd)
+
+
+        embed = discord.Embed(title='Solana Balance',description='Enter your wallet adress and see your balance',colour=discord.Color.blue())
+        embed.set_thumbnail(
+            url="https://cryptologos.cc/logos/solana-sol-logo.png?v=026")
+        embed.add_field(name='Balance',value=f'Balance:{round_balance}sol',inline=False)
+        embed.add_field(name='SOL/USD balance',value=round_sol_usd,inline=False)
+        embed.add_field(name='Current Sol Price',value=round_sol_price_usd,inline=False)
+        await ctx.respond(embed=embed)
 
 
 bot.run(TOKEN)
