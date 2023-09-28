@@ -649,7 +649,7 @@ async def get_balance(ctx,wallet):
             url="https://cryptologos.cc/logos/solana-sol-logo.png?v=026")
         embed.add_field(name='Balance',value=f'Balance:{round_balance}sol',inline=False)
         embed.add_field(name='SOL/USD balance',value=round_sol_usd,inline=False)
-        embed.add_field(name='Current Sol Price',value=round_sol_price_usd,inline=False)
+        embed.add_field(name='Current Sol Price',value=f'{round_sol_price_usd}$',inline=False)
         await ctx.respond(embed=embed)
 
 
