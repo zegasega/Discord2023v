@@ -11,12 +11,13 @@ from configs import TOKEN,WEATHER_API,wallet_address
 from discord.ext import tasks
 import time
 import platform
+import asyncio
 
 
 
 
 intents = discord.Intents.default()
-bot =discord.Bot(intents=intents,debug_guilds=[1005131834306342933])
+bot =discord.Bot(intents=intents,debug_guilds=[1005131834306342933]) #your server id
 
 
 
@@ -32,6 +33,7 @@ async def on_ready():
     print(prfx + ' Discord Version ' + Fore.YELLOW + discord.__version__)
     print(prfx + ' Python Version ' + Fore.YELLOW + str(platform.python_version()))
     update_nft_info.start()
+
 
 
 
@@ -651,6 +653,172 @@ async def get_balance(ctx,wallet):
         embed.add_field(name='SOL/USD balance',value=round_sol_usd,inline=False)
         embed.add_field(name='Current Sol Price',value=f'{round_sol_price_usd}$',inline=False)
         await ctx.respond(embed=embed)
+
+
+@bot.command()
+async def deploy(ctx, username):
+    """Deploy yourself to earn cp"""
+    url = f'https://ev.io/jsonapi/user/user?filter[name]={username}'
+    response = requests.get(url)
+
+    if response.status_code == 200:
+        data = response.json()
+
+        if 'data' in data and len(data['data']) > 0:
+            drupal_internal__uid = data['data'][0]['attributes']['drupal_internal__uid']
+            id = data['data'][0]['id']
+        else:
+            await ctx.respond("User not found.")
+            return
+
+
+        clan_url = "https://ev.io/group/11751?_format=json"  # Clan's API URL
+
+
+        response1 = requests.get(clan_url)
+
+        if response1.status_code == 200:
+            clan_data = response1.json()
+
+            # Check if the same user has been added before
+            if "field_deployed" in clan_data:
+                existing_users = clan_data["field_deployed"]
+                user_exists = any(user.get("target_id") == drupal_internal__uid for user in existing_users)
+                if not user_exists:
+                    # Create data for the new user to be added
+                    new_user = {
+                        "target_id": drupal_internal__uid,  # Unique ID of the new user
+                        "target_type": "user",
+                        "target_uuid": id,  # UUID of the new user
+                        "url": f"/user/{drupal_internal__uid}"  # URL of the new user
+                    }
+                    clan_data["field_deployed"].append(new_user)
+                else:
+                    await ctx.respond("This user is already deployed.")
+                    return
+            else:
+                clan_data["field_deployed"] = [{
+                    "target_id": drupal_internal__uid,
+                    "target_type": "user",
+                    "target_uuid": id,
+                    "url": f"/user/{drupal_internal__uid}"
+                }]
+
+            # Create a PATCH request to send the updated clan data back to the server
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": "Basic emVnYXNlZ2E6Z29rYmVya0Fua2FyYTIwMDg=",
+            }
+            response2 = requests.patch(clan_url, headers=headers, data=json.dumps(clan_data))
+
+
+            if response2.status_code == 200:
+                await ctx.respond(f'{username} Has been Succesfly Deployed')
+            else:
+                await ctx.respond(f"Error code: {response1.status_code}, Error message: {response2.text}")
+        else:
+            await ctx.respond(f"Error code: {response1.status_code}, Error message: {response1.text}")
+    else:
+        await ctx.respond(f"Error code: {response.status_code}, Error message: {response.text}")
+
+
+
+@tasks.loop(minutes=30)
+async def reset_clan_data():
+    clan_url = "https://ev.io/group/11751?_format=json"
+
+
+    response = requests.get(clan_url)
+    if response.status_code == 200:
+        clan_data = response.json()
+
+        # Reset the field_deployed list
+        clan_data["field_deployed"] = []
+
+
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": "Basic emVnYXNlZ2E6Z29rYmVya0Fua2FyYTIwMDg",
+        }
+        response = requests.patch(clan_url, headers=headers, data=json.dumps(clan_data))
+
+        if response.status_code == 200:
+            print("field_deployed reset successfully.")
+        else:
+            print(f"Error resetting field_deployed: {response.status_code}, {response.text}")
+    else:
+        print(f"Error fetching clan data: {response.status_code}, {response.text}")
+
+
+# Start the loop
+reset_clan_data.start()
+
+
+
+@bot.slash_command(
+    name="list_deployed",
+    description="List deployed users."
+)
+async def list_deployed(ctx):
+    # Uygulama yanıtını beklemek için ack (acknowledgment) gönder
+    await ctx.defer()
+
+    # API URL'si
+    api_url = "https://ev.io/group/11257?_format=json"
+
+    try:
+        # API'ye istek gönder
+        response = await asyncio.to_thread(requests.get, api_url)
+
+        # İstek başarılı mı kontrol et
+        if response.status_code == 200:
+            # API yanıtını JSON olarak ayrıştır
+            api_data = response.json()
+
+            # "field_deployed" dizisi içindeki "target_id" değerlerini al
+            target_ids = [item["target_id"] for item in api_data.get("field_deployed", [])]
+
+            # Kullanıcı adlarını içerecek bir liste oluştur
+            user_names = []
+
+            # Kullanıcı adlarını arka planda topla
+            async def fetch_user_names(target_id):
+                user_api_url = f"https://ev.io/user/{target_id}?_format=json"
+                user_response = await asyncio.to_thread(requests.get, user_api_url)
+
+                # İstek başarılı mı kontrol et
+                if user_response.status_code == 200:
+                    # Kullanıcı API yanıtını JSON olarak ayrıştır
+                    user_data = user_response.json()
+
+                    # "name" değerini al (bu değer bir liste içinde olabilir)
+                    user_name_list = user_data.get("name", [])
+
+                    # İlk öğeyi al (eğer mevcutsa) ve kullanıcı adlarını listeye ekle
+                    if user_name_list:
+                        user_name = user_name_list[0].get("value", "Bilinmeyen")
+                        user_names.append(user_name)
+
+            tasks = [fetch_user_names(target_id) for target_id in target_ids]
+            await asyncio.gather(*tasks)
+
+            user_list = "\n".join([f"**{name}**" for name in user_names])
+
+            # Embed oluştur ve kullanıcı adlarını ekleyin
+            embed = discord.Embed(title="Deployed Users", description=user_list, color=0x00ff00)
+            embed.set_footer(text="Deploy yourself to earn cp\nDeploy reset time:30 min")
+            embed.set_thumbnail(
+                url="https://ev.io/sites/default/files/insignias/out-OIG__6_-removebg-preview.png")
+
+            # Embed'i gönder
+            await ctx.respond(embed=embed)
+        else:
+            # İstek başarısızsa hata mesajı gönder
+            await ctx.send("Api Error Contact Dev.:" + str(response.status_code))
+
+    except Exception as e:
+        # Hata durumunda mesaj gönder
+        await ctx.send("Error: " + str(e))
 
 
 bot.run(TOKEN)
